@@ -11,10 +11,10 @@ namespace Library
     public interface ISessionService
     {
         [OperationContract]
-        void StartSession();
+        SessionResult StartSession();
         [OperationContract]
-        void PushSample();
+        SessionResult PushSample();
         [OperationContract]
-        void EndSession();
+        SessionResult EndSession();
     }
 }
