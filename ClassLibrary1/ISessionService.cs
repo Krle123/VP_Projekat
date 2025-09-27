@@ -13,7 +13,7 @@ namespace Library
         [OperationContract]
         SessionResult StartSession();
         [OperationContract]
-        SessionResult PushSample();
+        SessionResult PushSample(MotorSample sample);
         [OperationContract]
         SessionResult EndSession();
     }

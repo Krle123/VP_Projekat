@@ -29,5 +29,12 @@ namespace Library
         public int ProfileId { get { return profile_id; } set { profile_id = value; } }
         [DataMember]
         public double Ambient { get { return ambient; } set { ambient = value; } }
+
+        public override string ToString()
+        {
+            string s = string.Empty;
+            s += $"{I_q},{I_d},{Coolant},{Torque},{ProfileId},{Ambient}";
+            return s;
+        }
     }
 }
