@@ -17,78 +17,118 @@ namespace Service
         }
     }
 
-    public class WarningEventArgs : EventArgs
+    public class SpikeEventArgs : EventArgs
     {
-        public string Message { get; }
-        public MotorSample Sample { get; }
-
-        public WarningEventArgs(string message, MotorSample sample = null)
+        public bool AboveExpected { get; }
+        public SpikeEventArgs(bool aboveExpected)
         {
-            Message = message;
-            Sample = sample;
+            AboveExpected = aboveExpected;
         }
     }
-    public class Events
-    {
-        public static event EventHandler OnTransferStarted;
-        public static event EventHandler<SampleEventArgs> OnSampleReceived;
-        public static event EventHandler OnTransferCompleted;
-        public static event EventHandler<WarningEventArgs> OnWarningRaised;
 
-        private static readonly double T_threshold = double.Parse(ConfigurationManager.AppSettings["T_threshold"]);
-        private static readonly double Iq_threshold = double.Parse(ConfigurationManager.AppSettings["Iq_threshold"]);
-        private static readonly double Id_threshold = double.Parse(ConfigurationManager.AppSettings["Id_threshold"]);
-        private static readonly double DeviationPercent = 0.25; 
-
-        private static double sumIq = 0, sumId = 0, sumT = 0;
-        private static int count = 0;
-
-        public static void RaiseTransferStarted()
+        public class WarningEventArgs : EventArgs
         {
-            OnTransferStarted?.Invoke(null, EventArgs.Empty);
-            Console.WriteLine("[INFO] Transfer started.");
+            public string Message { get; }
+            public MotorSample Sample { get; }
+
+            public WarningEventArgs(string message, MotorSample sample = null)
+            {
+                Message = message;
+                Sample = sample;
+            }
         }
-
-        public static void RaiseSampleReceived(MotorSample sample)
+        public class Events
         {
-            OnSampleReceived?.Invoke(null, new SampleEventArgs(sample));
-            Console.WriteLine($"[INFO] Sample received: {sample}");
+            public static event EventHandler OnTransferStarted;
+            public static event EventHandler<SampleEventArgs> OnSampleReceived;
+            public static event EventHandler OnTransferCompleted;
+            public static event EventHandler<WarningEventArgs> OnWarningRaised;
+            public event EventHandler<SpikeEventArgs> ElectricSpikeQ;
+            public event EventHandler<SpikeEventArgs> ElectricSpikeD;
+            public event EventHandler<SpikeEventArgs> TemperatureSpike;
 
-            sumIq += sample.I_q;
-            sumId += sample.I_d;
-            sumT += sample.Torque;
-            count++;
+            private static readonly double T_threshold = double.Parse(ConfigurationManager.AppSettings["T_threshold"]);
+            private static readonly double Iq_threshold = double.Parse(ConfigurationManager.AppSettings["Iq_threshold"]);
+            private static readonly double Id_threshold = double.Parse(ConfigurationManager.AppSettings["Id_threshold"]);
+            private static readonly double DeviationPercent = 0.25;
 
-            double avgIq = sumIq / count;
-            double avgId = sumId / count;
-            double avgT = sumT / count;
+            private static double sumT = 0;
+            private static int count = 0;
 
-            if (Math.Abs(sample.I_q) > Iq_threshold)
-                OnWarningRaised?.Invoke(null, new WarningEventArgs($"I_q preko praga: {sample.I_q}", sample));
-            if (Math.Abs(sample.I_d) > Id_threshold)
-                OnWarningRaised?.Invoke(null, new WarningEventArgs($"I_d preko praga: {sample.I_d}", sample));
-            if (Math.Abs(sample.Torque) > T_threshold)
-                OnWarningRaised?.Invoke(null, new WarningEventArgs($"Torque preko praga: {sample.Torque}", sample));
+            private static bool firstSample = true;
 
-            if (Math.Abs(sample.I_q - avgIq) > DeviationPercent * avgIq)
-                OnWarningRaised?.Invoke(null, new WarningEventArgs($"I_q odstupa više od 25% od proseka ({avgIq:F2})", sample));
-            if (Math.Abs(sample.I_d - avgId) > DeviationPercent * avgId)
-                OnWarningRaised?.Invoke(null, new WarningEventArgs($"I_d odstupa više od 25% od proseka ({avgId:F2})", sample));
-            if (Math.Abs(sample.Torque - avgT) > DeviationPercent * avgT)
-                OnWarningRaised?.Invoke(null, new WarningEventArgs($"Torque odstupa više od 25% od proseka ({avgT:F2})", sample));
-        }
+            private static double currentI_q = 0;
+            private static double currentI_d = 0;
+            private static double currentCoolant = 0;
 
-        public static void RaiseTransferCompleted()
-        {
-            OnTransferCompleted?.Invoke(null, EventArgs.Empty);
-            Console.WriteLine("[INFO] Transfer completed.");
-            ResetStats();
-        }
+            private static double lastI_q = 0;
+            private static double lastI_d = 0;
+            private static double lastCoolant = 0;
 
-        private static void ResetStats()
-        {
-            sumIq = sumId = sumT = 0;
-            count = 0;
+            private static double differenceI_q = 0;
+            private static double differenceI_d = 0;
+            private static double differenceCoolant = 0;
+
+            public void RaiseTransferStarted()
+            {
+                OnTransferStarted?.Invoke(null, EventArgs.Empty);
+                Console.WriteLine("Transfer started.....");
+            }
+
+            public void RaiseSampleReceived(MotorSample sample)
+            {
+                OnSampleReceived?.Invoke(null, new SampleEventArgs(sample));
+                Console.WriteLine($"Sample {++count} received ");
+
+                sumT += sample.Coolant;
+
+                double avgT = sumT / count;
+
+                if (firstSample)
+                {
+                    currentI_q = sample.I_q;
+                    currentI_d = sample.I_d;
+                    currentCoolant = sample.Coolant;
+                    firstSample = false;
+                }
+                else
+                {
+                    lastI_q = currentI_q;
+                    lastI_d = currentI_d;
+                    lastCoolant = currentCoolant;
+                    currentI_q = sample.I_q;
+                    currentI_d = sample.I_d;
+                    currentCoolant = sample.Coolant;
+
+                    differenceI_q = currentI_q - lastI_q;
+                    differenceI_d = currentI_d - lastI_d;
+                    differenceCoolant = currentCoolant - lastCoolant;
+
+                    if (Math.Abs(differenceI_q) > Iq_threshold)
+                        ElectricSpikeQ(null, new SpikeEventArgs(differenceI_q >= 0));
+                    if (Math.Abs(differenceI_d) > Id_threshold)
+                        ElectricSpikeD(null, new SpikeEventArgs(differenceI_d >= 0));
+                    if (Math.Abs(differenceCoolant) > T_threshold)
+                        TemperatureSpike(null, new SpikeEventArgs(differenceCoolant >= 0));
+
+                    if (Math.Abs(sample.Coolant - avgT) > DeviationPercent * avgT)
+                        OnWarningRaised?.Invoke(null, new WarningEventArgs($"Torque odstupa više od 25% od proseka ({avgT:F2})", sample));
+                }
+
+            }
+
+            public void RaiseTransferCompleted()
+            {
+                OnTransferCompleted?.Invoke(null, EventArgs.Empty);
+                Console.WriteLine("Transfer completed.");
+                ResetStats();
+            }
+
+            private void ResetStats()
+            {
+                sumT = 0;
+                count = 0;
+                firstSample = true;
+            }
         }
     }
-}

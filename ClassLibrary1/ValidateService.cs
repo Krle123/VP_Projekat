@@ -67,8 +67,6 @@ namespace Library
                 throw new FaultException<ValidationFault>(
                     new ValidationFault { Field = "Torque", Message = "Torque mora biti u opsegu [0, 1000]" },
                     new FaultReason("Validation error"));
-
-            Console.WriteLine($"Sample valid: ProfileId={sample.ProfileId}, Coolant={sample.Coolant}");
             }
         }
     }

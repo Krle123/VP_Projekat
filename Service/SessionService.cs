@@ -1,5 +1,6 @@
 ﻿using Library;
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.ServiceModel;
 
@@ -11,9 +12,15 @@ namespace Service
         private StreamWriter measurements_sw = null;
         private StreamWriter rejects_sw = null;
         private readonly IValidateService validate_service = new ValidateService();
+        private readonly Events events = new Events();
+
         [OperationBehavior(AutoDisposeParameters = true)]
         public SessionResult StartSession()
         {
+            events.ElectricSpikeQ += OnElectricSpikeQ;
+            events.ElectricSpikeD += OnElectricSpikeD;
+            events.TemperatureSpike += OnTemperatureSpike;
+
             var results = new SessionResult();
             try
             {
@@ -31,7 +38,7 @@ namespace Service
                     results.ResultType = ResultType.Warning;
                     return results;
                 }
-                Console.WriteLine("Transfer in progress....");
+                events.RaiseTransferStarted();
             }
             catch (Exception ex)
             {
@@ -48,6 +55,7 @@ namespace Service
             var results = new SessionResult();
             try
             {
+                events.RaiseSampleReceived(sample);
                 validate_service.Validate(sample);
                 if (measurements_sw == null)
                 {
@@ -87,7 +95,7 @@ namespace Service
                 measurements_sw.Close();
                 rejects_sw.Close();
 
-                Console.WriteLine("Transfer complete");
+                events.RaiseTransferCompleted();
             }
             catch (Exception ex)
             {
@@ -97,6 +105,30 @@ namespace Service
             results.ResultMessage = "Succesfully closed session.";
             results.ResultType = ResultType.Success;
             return results;
+        }
+
+        public void OnElectricSpikeQ(object sender, SpikeEventArgs e)
+        {
+            if (e.AboveExpected)
+                Console.WriteLine("ALARM: I_q is above threshold");
+            else
+                Console.WriteLine("ALARM: I_q is below threshold");
+        }
+
+        public void OnElectricSpikeD(object sender, SpikeEventArgs e)
+        {
+            if (e.AboveExpected)
+                Console.WriteLine("ALARM: I_d is above threshold");
+            else
+                Console.WriteLine("ALARM: I_d is below threshold");
+        }
+
+        public void OnTemperatureSpike(object sender, SpikeEventArgs e)
+        {
+            if (e.AboveExpected)
+                Console.WriteLine("ALARM: Temperature is above threshold");
+            else
+                Console.WriteLine("ALARM: Temperature is below threshold");
         }
     }
 }
