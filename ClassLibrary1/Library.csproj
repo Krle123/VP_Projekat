@@ -43,12 +43,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ValidationService.cs" />
     <Compile Include="ISessionService.cs" />
     <Compile Include="MotorSample.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SessionResult.cs" />
-    <Compile Include="ValidationService.cs" />
+    <Compile Include="ValidateService.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

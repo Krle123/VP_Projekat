@@ -44,6 +44,7 @@ namespace Library
                     if (MemoryStream == null)
                         return;
                     MemoryStream.Dispose();
+                    MemoryStream = null;
                 }
                 disposedValue = true;
             }

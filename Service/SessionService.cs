@@ -1,23 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using Library;
+using System;
 using System.IO;
-using System.Linq;
 using System.ServiceModel;
-using System.Text;
-using System.Threading.Tasks;
-using Library;
 
 namespace Service
 {
+    [ServiceBehavior(InstanceContextMode = InstanceContextMode.Single)]
     public class SessionService : ISessionService
     {
         private StreamWriter measurements_sw = null;
         private StreamWriter rejects_sw = null;
+        private readonly IValidateService validate_service = new ValidateService();
         [OperationBehavior(AutoDisposeParameters = true)]
         public SessionResult StartSession()
         {
             var results = new SessionResult();
-            try 
+            try
             {
                 measurements_sw = new StreamWriter("measurements_session.csv");
                 if (measurements_sw == null)
@@ -33,6 +31,7 @@ namespace Service
                     results.ResultType = ResultType.Warning;
                     return results;
                 }
+                Console.WriteLine("Transfer in progress....");
             }
             catch (Exception ex)
             {
@@ -49,32 +48,31 @@ namespace Service
             var results = new SessionResult();
             try
             {
-                bool validated = false; //Validate();
-                if (validated)
+                validate_service.Validate(sample);
+                if (measurements_sw == null)
                 {
-                    if (measurements_sw == null)
-                    {
-                        results.ResultMessage = "Failed to open file: measurements_session.csv";
-                        results.ResultType = ResultType.Warning;
-                        return results;
-                    }
-                    measurements_sw.Write(sample.ToString());
+                    results.ResultMessage = "Failed to open file: measurements_session.csv";
+                    results.ResultType = ResultType.Warning;
+                    return results;
                 }
-                else
+                measurements_sw.WriteLine(sample.ToString());
+            }
+            catch (FaultException<ValidationFault>)
+            {
+                if (rejects_sw == null)
                 {
-                    if (rejects_sw == null)
-                    {
-                        results.ResultMessage = "Failed to open file: rejects.csv";
-                        results.ResultType = ResultType.Warning;
-                        return results;
-                    }
-                    rejects_sw.WriteLine(sample.ToString());
+                    results.ResultMessage = "Failed to open file: rejects.csv";
+                    results.ResultType = ResultType.Warning;
+                    return results;
                 }
+                rejects_sw.WriteLine(sample.ToString());
             }
             catch (Exception ex)
             {
                 results.ResultType = ResultType.Failed;
                 results.ResultMessage = ex.Message;
+                Console.WriteLine(ex.Message);
+                return results;
             }
             results.ResultMessage = "Succesfully sent sample";
             results.ResultType = ResultType.Success;
@@ -88,6 +86,8 @@ namespace Service
             {
                 measurements_sw.Close();
                 rejects_sw.Close();
+
+                Console.WriteLine("Transfer complete");
             }
             catch (Exception ex)
             {

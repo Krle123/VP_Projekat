@@ -8,26 +8,29 @@ using System.Threading.Tasks;
 
 namespace Library
 {
-    public class ValidationService
+    [DataContract]
+    public class ValidationFault
     {
-        public class ValidationFault
-        {
-            [DataMember] public string Field { get; set; }
-            [DataMember] public string Message { get; set; }
-        }
+        [DataMember] public string Field { get; set; }
+        [DataMember] public string Message { get; set; }
+    }
 
-        [DataContract]
-        public class DataFormatFault
-        {
-            [DataMember] public string Message { get; set; }
-        }
+    [DataContract]
+    public class DataFormatFault
+    {
+        [DataMember] public string Message { get; set; }
+    }
 
-        [ServiceContract]
-        public class ValidateService
+    [ServiceContract]
+    public interface IValidateService
+    {
+        [OperationContract]
+        [FaultContract(typeof(ValidationFault))]
+        [FaultContract(typeof(DataFormatFault))]
+        void Validate(MotorSample sample);
+    }
+        public class ValidateService : IValidateService
         {
-            [OperationContract]
-            [FaultContract(typeof(ValidationFault))]
-            [FaultContract(typeof(DataFormatFault))]
             public void Validate(MotorSample sample)
             {
                 if (sample == null)
@@ -69,4 +72,3 @@ namespace Library
             }
         }
     }
-}
