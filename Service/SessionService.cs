@@ -14,7 +14,6 @@ namespace Service
         private readonly IValidateService validate_service = new ValidateService();
         private readonly Events events = new Events();
 
-
         [OperationBehavior(AutoDisposeParameters = true)]
         public SessionResult StartSession()
         {
@@ -95,6 +94,10 @@ namespace Service
             {
                 measurements_sw.Close();
                 rejects_sw.Close();
+
+                events.ElectricSpikeQ -= OnElectricSpikeQ;
+                events.ElectricSpikeD -= OnElectricSpikeD;
+                events.TemperatureSpike -= OnTemperatureSpike;
 
                 events.RaiseTransferCompleted();
             }
