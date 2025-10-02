@@ -19,41 +19,16 @@ namespace Library
         Failed
     }
     [DataContract]
-    public class SessionResult : IDisposable
+    public class SessionResult
     {
-        private bool disposedValue;
         [DataMember]
         public string ResultMessage { get; set; }
         [DataMember]
         public ResultType ResultType { get; set; }
-        [DataMember]
-        public MemoryStream MemoryStream { get; set; }
 
-        public SessionResult() 
+        public SessionResult()
         {
             ResultType = ResultType.Success;
-            MemoryStream = new MemoryStream();
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (!disposedValue)
-            {
-                if (disposing)
-                {
-                    if (MemoryStream == null)
-                        return;
-                    MemoryStream.Dispose();
-                    MemoryStream = null;
-                }
-                disposedValue = true;
-            }
-        }
-
-        public void Dispose()
-        {
-            Dispose(disposing: true);
-            GC.SuppressFinalize(this);
         }
     }
 }

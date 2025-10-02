@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Library
 {
     [ServiceContract]
-    public interface ISessionService
+    public interface ISessionService : IDisposable
     {
         [OperationContract]
         SessionResult StartSession();

@@ -17,7 +17,7 @@ namespace Client
             using (var reader = new StreamReader(csvPath))
             using (var logWriter = new StreamWriter(logPath))
             {
-                string headerLine = reader.ReadLine(); // Header    
+                string headerLine = reader.ReadLine(); 
                 int rowCount = 0;
                 int lineNumber = 1;
 
@@ -31,7 +31,7 @@ namespace Client
                     {
                         if (values.Length < 12) 
                         {
-                            logWriter.WriteLine($"[GRESKA] Linija {lineNumber}: premalo kolona ({values.Length})");
+                            logWriter.WriteLine($"[Error] Line {lineNumber}: not enough columns ({values.Length})");
                             continue;
                         }
 
@@ -50,7 +50,7 @@ namespace Client
                     }
                     catch (Exception ex)
                     {
-                        logWriter.WriteLine($"[GRESKA] Linija {lineNumber}: {ex.Message}");
+                        logWriter.WriteLine($"[Error] Line {lineNumber}: {ex.Message}");
                     }
                 }
             }

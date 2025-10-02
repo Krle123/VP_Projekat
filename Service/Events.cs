@@ -58,18 +58,16 @@ namespace Service
         public static event EventHandler OnTransferStarted;
         public static event EventHandler<SampleEventArgs> OnSampleReceived;
         public static event EventHandler OnTransferCompleted;
-        public static event EventHandler<WarningEventArgs> OnWarningRaised;
+        public event EventHandler<WarningEventArgs> WarningRaised;
         public event EventHandler<SpikeEventArgs> ElectricSpikeQ;
         public event EventHandler<SpikeEventArgs> ElectricSpikeD;
         public event EventHandler<SpikeEventArgs> TemperatureSpike;
-        public static event EventHandler<OutOfBandWarningEventArgs> OnOutOfBandWarning;
+        public event EventHandler<OutOfBandWarningEventArgs> OutOfBandWarning;
 
         private static readonly double T_threshold = double.Parse(ConfigurationManager.AppSettings["T_threshold"]);
         private static readonly double Iq_threshold = double.Parse(ConfigurationManager.AppSettings["Iq_threshold"]);
         private static readonly double Id_threshold = double.Parse(ConfigurationManager.AppSettings["Id_threshold"]);
         private static readonly double OutOfBandThreshold = double.Parse(ConfigurationManager.AppSettings["OutOfBandThreshold"]);
-
-        private static readonly double DeviationPercent = 0.25;
 
         private static double sumT = 0;
         private static int count = 0;
@@ -130,17 +128,13 @@ namespace Service
                 if (Math.Abs(differenceCoolant) > T_threshold)
                     TemperatureSpike(null, new SpikeEventArgs(differenceCoolant >= 0));
 
-                if (Math.Abs(sample.Coolant - avgT) > DeviationPercent * avgT)
-                    OnWarningRaised?.Invoke(null, new WarningEventArgs($"Torque odstupa više od 25% od proseka ({avgT:F2})", sample));
-
-
                 double lowerBound = avgT * (1 - OutOfBandThreshold);
                 double upperBound = avgT * (1 + OutOfBandThreshold);
 
                 if (sample.Coolant < lowerBound)
-                    OnOutOfBandWarning?.Invoke(null, new OutOfBandWarningEventArgs("ispod očekivane vrednosti", sample));
+                    OutOfBandWarning?.Invoke(null, new OutOfBandWarningEventArgs("under expected value", sample));
                 else if (sample.Coolant > upperBound)
-                    OnOutOfBandWarning?.Invoke(null, new OutOfBandWarningEventArgs("iznad očekivane vrednosti", sample));
+                    OutOfBandWarning?.Invoke(null, new OutOfBandWarningEventArgs("above expected value", sample));
             }
 
         }

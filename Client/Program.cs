@@ -16,6 +16,7 @@ namespace Client
         static void Main(string[] args)
         {
             ChannelFactory<ISessionService> channelFactory = new ChannelFactory<ISessionService>("SessionService");
+            SessionResult results = new SessionResult();
             string csvPath = @"measures_v2.csv"; 
             string logPath = @"log.txt";
 
@@ -30,13 +31,16 @@ namespace Client
                 number = PrintMenu();
                 if(number == 1)
                 {
-                    proxy.StartSession();
+                    results = proxy.StartSession();
+                    CheckForResults(results);
                     for (int i = 0; i < samples.Count; i++)
                     {
-                        proxy.PushSample(samples[i]);
+                        results = proxy.PushSample(samples[i]);
+                        CheckForResults(results);
                         Thread.Sleep(500);
                     }
-                    proxy.EndSession();
+                    results = proxy.EndSession();
+                    CheckForResults(results);
                 }
             }
             while (number != 2);
@@ -60,6 +64,22 @@ namespace Client
             catch (Exception ex)
             {
                 return 0;
+            }
+        }
+
+        public static void CheckForResults(SessionResult result)
+        {
+            switch (result.ResultType)
+            {
+                case ResultType.Success:
+                    Console.WriteLine($"SUCCESS: {result.ResultMessage}");
+                    break;
+                case ResultType.Warning:
+                    Console.WriteLine($"WARNING: {result.ResultMessage}");
+                    break;
+                case ResultType.Failed:
+                    Console.WriteLine($"FAILED: {result.ResultMessage}");
+                    break;
             }
         }
     }

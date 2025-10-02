@@ -11,6 +11,7 @@ namespace Service
     {
         private StreamWriter measurements_sw = null;
         private StreamWriter rejects_sw = null;
+        private bool disposedValue;
         private readonly IValidateService validate_service = new ValidateService();
         private readonly Events events = new Events();
 
@@ -20,6 +21,8 @@ namespace Service
             events.ElectricSpikeQ += OnElectricSpikeQ;
             events.ElectricSpikeD += OnElectricSpikeD;
             events.TemperatureSpike += OnTemperatureSpike;
+            events.WarningRaised += OnWarningRaised;
+            events.OutOfBandWarning += OnOutOfBandWarning;
 
             var results = new SessionResult();
             try
@@ -75,6 +78,16 @@ namespace Service
                 }
                 rejects_sw.WriteLine(sample.ToString());
             }
+            catch (FaultException<DataFormatFault>)
+            {
+                if (rejects_sw == null)
+                {
+                    results.ResultMessage = "Failed to open file: rejects.csv";
+                    results.ResultType = ResultType.Warning;
+                    return results;
+                }
+                rejects_sw.WriteLine(sample.ToString());
+            }
             catch (Exception ex)
             {
                 results.ResultType = ResultType.Failed;
@@ -98,6 +111,8 @@ namespace Service
                 events.ElectricSpikeQ -= OnElectricSpikeQ;
                 events.ElectricSpikeD -= OnElectricSpikeD;
                 events.TemperatureSpike -= OnTemperatureSpike;
+                events.WarningRaised -= OnWarningRaised;
+                events.OutOfBandWarning -= OnOutOfBandWarning;
 
                 events.RaiseTransferCompleted();
             }
@@ -133,6 +148,49 @@ namespace Service
                 Console.WriteLine("ALARM: Temperature is above threshold");
             else
                 Console.WriteLine("ALARM: Temperature is below threshold");
+        }
+
+        public void OnWarningRaised(object sender, WarningEventArgs e)
+        {
+            Console.WriteLine($"WARNING: {e.Message}");
+        }
+
+        public void OnOutOfBandWarning(object sender, OutOfBandWarningEventArgs e)
+        {
+            Console.WriteLine($"WARNING: Out of Band for cooland: {e.Direction}");
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    if (measurements_sw != null)
+                    {
+                        measurements_sw.Dispose();
+                        measurements_sw = null;
+                    }
+
+                    if (rejects_sw != null)
+                    {
+                        rejects_sw.Dispose();
+                        rejects_sw = null;
+                    }
+
+                    events.ElectricSpikeQ -= OnElectricSpikeQ;
+                    events.ElectricSpikeD -= OnElectricSpikeD;
+                    events.TemperatureSpike -= OnTemperatureSpike;
+                }
+
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }
