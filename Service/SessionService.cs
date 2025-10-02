@@ -14,6 +14,7 @@ namespace Service
         private readonly IValidateService validate_service = new ValidateService();
         private readonly Events events = new Events();
 
+
         [OperationBehavior(AutoDisposeParameters = true)]
         public SessionResult StartSession()
         {
